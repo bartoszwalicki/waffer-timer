@@ -19,10 +19,18 @@
 
   --color-machine-1: #fbbf24;
   --color-machine-2: #22d3ee;
-  --color-overdue: #ef4444;
 
-  /* Filled accents are always saturated mid-tones, so near-black label text
-     beats white on contrast in both themes. */
+  /* Three overdue tokens, not one. Reusing the border red for the digits put
+     saturated red on a red wash: 2.9:1 in dark and 2.1:1 in light, under the
+     3:1 floor for large text in the one state the operator must read fastest.
+     `overdue` is the border and bar, `overdue-ink` the text, and the wash is
+     an opaque pair the pulse animates between. */
+  --color-overdue: #ef4444;
+  --color-overdue-ink: #fca5a5;
+  --overdue-wash-lo: #2a1114;
+  --overdue-wash-hi: #4d171b;
+
+  /* Dark theme accents are bright, so near-black beats white on them. */
   --color-on-accent: #0a0e13;
 
   --animate-overdue: overdue-pulse 1.1s ease-in-out infinite;
@@ -34,11 +42,11 @@
 @keyframes overdue-pulse {
   0%,
   100% {
-    background-color: color-mix(in srgb, var(--color-overdue) 14%, transparent);
+    background-color: var(--overdue-wash-lo);
     border-color: var(--color-overdue);
   }
   50% {
-    background-color: color-mix(in srgb, var(--color-overdue) 42%, transparent);
+    background-color: var(--overdue-wash-hi);
     border-color: color-mix(in srgb, var(--color-overdue) 60%, white);
   }
 }
@@ -53,9 +61,20 @@
   --color-ink-dim: #556278;
   --color-line: #c3cfdd;
 
-  --color-machine-1: #d97706;
-  --color-machine-2: #0e91b0;
+  /* Darker than the dark-theme accents, because these sit on white: the
+     lighter #d97706/#0e91b0 were only 3.19:1 and 3.69:1, which clears large
+     text and nothing else. These reach ~5:1 and stay legible on the overdue
+     wash too, so a panel keeps its machine identity while alarming. */
+  --color-machine-1: #b45309;
+  --color-machine-2: #0e7490;
+
   --color-overdue: #dc2626;
+  --color-overdue-ink: #991b1b;
+  --overdue-wash-lo: #fdeced;
+  --overdue-wash-hi: #f9d6d8;
+
+  /* Inverted from dark: these accents are dark, so white labels win. */
+  --color-on-accent: #ffffff;
 
   color-scheme: light;
 }

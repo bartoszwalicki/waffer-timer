@@ -46,14 +46,15 @@ export function TimerPanel({ accent, name, timer, stepSeconds, onStepDuration }:
       aria-label={name}
       className={`panel flex min-w-0 flex-1 flex-col gap-3 rounded-3xl border-4 p-3 transition-colors duration-300 sm:gap-4 sm:p-4 ${
         overdue
-          ? 'animate-overdue border-overdue bg-overdue/15'
+          ? 'animate-overdue border-overdue'
           : `bg-panel ${colors.border} ${running ? colors.glow : ''}`
       }`}
     >
+      {/* The name keeps its machine colour even while overdue. Turning the whole
+          panel red otherwise made both machines identical in the one state where
+          knowing which is which matters most. */}
       <h2
-        className={`shrink-0 truncate text-center text-xl font-bold tracking-[0.2em] uppercase sm:text-2xl ${
-          overdue ? 'text-overdue' : colors.text
-        }`}
+        className={`shrink-0 truncate text-center text-xl font-bold tracking-[0.2em] uppercase sm:text-2xl ${colors.text}`}
       >
         {name}
       </h2>
@@ -71,12 +72,16 @@ export function TimerPanel({ accent, name, timer, stepSeconds, onStepDuration }:
             '-100:00' — so the font size has to know how many characters it is
             sizing. See the .digits rule. */}
         <span
-          className={`digits block ${overdue ? 'text-overdue' : colors.text}`}
+          className={`digits block ${overdue ? 'text-overdue-ink' : colors.text}`}
           style={{ '--digit-chars': Math.max(6, label.length) } as CSSProperties}
         >
           {label}
         </span>
-        <span className="text-base font-semibold tracking-widest text-ink-dim uppercase sm:text-lg">
+        <span
+          className={`text-base font-semibold tracking-widest uppercase sm:text-lg ${
+            overdue ? 'text-overdue-ink' : 'text-ink-dim'
+          }`}
+        >
           {overdue ? 'overdue' : running ? 'baking' : 'ready'}
           {/* While running the digits show the countdown, so the programmed
               value has to stay visible somewhere. Idle, they are the same
@@ -93,10 +98,10 @@ export function TimerPanel({ accent, name, timer, stepSeconds, onStepDuration }:
       {/* Readable from across the table without focusing on the digits: how
           much is left, as a shape. The digits already carry the number, so
           this is decorative to a screen reader. */}
-      <div
-        aria-hidden="true"
-        className="h-4 shrink-0 overflow-hidden rounded-full bg-line/50 sm:h-5"
-      >
+      {/* Full-opacity track, not bg-line/50: at half opacity the light-theme
+          fill only reached 2.6:1 against it, under the 3:1 floor for a
+          graphical indicator with no text equivalent. */}
+      <div aria-hidden="true" className="h-4 shrink-0 overflow-hidden rounded-full bg-line sm:h-5">
         <div
           className={`h-full rounded-full transition-[width] duration-200 ease-linear ${
             overdue ? 'bg-overdue' : colors.fill

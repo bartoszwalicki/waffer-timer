@@ -34,9 +34,14 @@ A few decisions are load-bearing and easy to undo by accident:
   throttle timers hard in background tabs, so an accumulating counter would drift or stall.
   `useTimer` uses `Date.now()` deliberately (it survives device sleep); `useAlarm` uses
   `performance.now()` deliberately (monotonic, so a clock step can't wedge the alarm on).
-- **Running countdowns are in memory only.** A service-worker update therefore waits for both
-  timers to be idle before reloading — see `src/lib/reload-gate.ts`. If you make the app reload
-  for any other reason, gate it the same way or you will reset both machines mid-service.
+- **Running countdowns are in memory only**, so any reload resets both machines. Under
+  `registerType: 'autoUpdate'`, vite-plugin-pwa reloads the page *itself* the moment a new worker
+  activates — unless you pass **`onNeedReload`**, which hands that decision to you.
+  `src/lib/updates.ts` does exactly that and routes it through `src/lib/reload-gate.ts`, which
+  holds the reload until both timers are idle. It must be `onNeedReload`: `onNeedRefresh` is only
+  consulted in the plugin's *prompt* branch, so using it silently leaves the plugin's own
+  unconditional reload in place. `src/lib/updates.test.ts` pins this down, including the plugin
+  behaviour it depends on — a unit test of the gate alone cannot catch it.
 - **The digit font size divides by the label's character count.** A timer left running reaches
   `-100:00`, and the label is not a fixed width; sizing on a fixed six characters overflowed the
   panel. The `18vh` cap is what keeps two stacked panels inside a 768×1024 portrait tablet.

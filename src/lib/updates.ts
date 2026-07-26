@@ -17,22 +17,32 @@ export function setReloadAllowed(allowed: boolean): void {
 /**
  * Registers the service worker and keeps a long-lived kiosk tab up to date.
  *
- * `registerType: 'autoUpdate'` installs a new worker and claims the page, but
- * it never reloads an already-loaded document — a tablet left running for weeks
- * would keep serving the build it started with. This polls for updates and
- * reloads, but only once both timers are idle.
+ * `registerType: 'autoUpdate'` installs a new worker and claims the page, and
+ * then — unless told otherwise — reloads the document the moment the new worker
+ * activates. On a wall-mounted tablet that reload is dangerous: running
+ * countdowns live only in memory, so it silently returns both machines to
+ * READY with nobody watching and the waffles still in the iron.
+ *
+ * `onNeedReload` is the hook that takes that reload over. It MUST be
+ * `onNeedReload`, not `onNeedRefresh`: in autoUpdate mode the plugin only
+ * consults `onNeedRefresh` in its prompt branch, so using it leaves the
+ * unconditional `window.location.reload()` in place and this gate inert.
+ * updates.test.ts pins that down.
  */
 export function registerUpdates(): void {
-  const update = registerSW({
+  registerSW({
     onRegisteredSW(_swUrl, registration) {
       if (!registration) return
+      // A long-lived kiosk tab never navigates, so nothing would otherwise ask
+      // the server whether a newer build exists.
       setInterval(() => {
-        // Pointless while offline, and it would only log a failed fetch.
-        if (navigator.onLine) void registration.update()
+        // Pointless while offline, and an unhandled rejection every hour on
+        // flaky kitchen wifi is worse than skipping the check.
+        if (navigator.onLine) void registration.update().catch(() => {})
       }, CHECK_INTERVAL_MS)
     },
-    onNeedRefresh() {
-      gate.request(() => void update(true))
+    onNeedReload() {
+      gate.request(() => window.location.reload())
     },
   })
 }

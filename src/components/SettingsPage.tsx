@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import type { WakeLockStatus } from '../hooks/useWakeLock'
 import {
   BEEP_DURATION_CHOICES_MS,
@@ -83,9 +83,21 @@ export function SettingsPage({
   onClose,
   onTestAlarm,
 }: SettingsPageProps) {
+  const [confirmingReset, setConfirmingReset] = useState(false)
+
+  // Disarm on its own, so a half-pressed reset cannot lie in wait for whoever
+  // opens settings next.
+  useEffect(() => {
+    if (!confirmingReset) return
+    const id = setTimeout(() => setConfirmingReset(false), 4000)
+    return () => clearTimeout(id)
+  }, [confirmingReset])
+
   return (
     <div className="flex h-full flex-col gap-3 overflow-y-auto p-3">
-      <header className="flex shrink-0 items-center gap-4">
+      {/* Sticky: on the viewports where this page has to scroll, a static
+          header took the only way out off-screen with it. */}
+      <header className="sticky top-0 z-10 flex shrink-0 items-center gap-4 bg-surface pb-2">
         <button
           type="button"
           onClick={onClose}
@@ -187,12 +199,26 @@ export function SettingsPage({
           </Section>
 
           <Section title="Reset">
+            {/* Two taps, because one tap wipes both names, both durations, the
+                theme and the alarm window — and it sits directly under the name
+                fields. Arms for 4s, then goes back to being inert. */}
             <button
               type="button"
-              onClick={() => onUpdate(DEFAULT_SETTINGS)}
-              className="min-h-[5rem] rounded-2xl border-2 border-overdue bg-transparent text-2xl font-bold tracking-wide text-overdue uppercase active:bg-overdue/20"
+              onClick={() => {
+                if (!confirmingReset) {
+                  setConfirmingReset(true)
+                  return
+                }
+                setConfirmingReset(false)
+                onUpdate(DEFAULT_SETTINGS)
+              }}
+              className={`min-h-[5rem] rounded-2xl border-2 border-overdue text-2xl font-bold tracking-wide uppercase ${
+                confirmingReset
+                  ? 'bg-overdue text-on-accent'
+                  : 'bg-transparent text-overdue active:bg-overdue/20'
+              }`}
             >
-              Restore defaults
+              {confirmingReset ? 'Tap again to confirm' : 'Restore defaults'}
             </button>
           </Section>
         </div>

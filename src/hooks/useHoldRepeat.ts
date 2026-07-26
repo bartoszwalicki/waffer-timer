@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, type KeyboardEvent } from 'react'
 
 /** Pause before a hold starts repeating, so a normal tap fires exactly once. */
 const INITIAL_DELAY_MS = 450
 const START_INTERVAL_MS = 220
-const MIN_INTERVAL_MS = 60
+/** Deliberately not faster: at a 60ms floor a two-second hold ran a timer from
+ *  02:30 all the way to the 5s minimum, which is easy to do by accident and has
+ *  no undo. */
+const MIN_INTERVAL_MS = 90
 /** Each repeat shortens the gap, so a long hold covers minutes quickly. */
-const ACCELERATION = 0.82
+const ACCELERATION = 0.88
 
 /**
  * Fires `action` on press, then repeatedly (and ever faster) while held.
@@ -61,5 +64,13 @@ export function useHoldRepeat(action: () => void) {
     onPointerUp: stop,
     onPointerCancel: stop,
     onPointerLeave: stop,
+    // Pointer events alone leave a <button> that ignores Enter and Space.
+    // preventDefault stops the browser's synthetic click, so pointer input
+    // still fires exactly once.
+    onKeyDown: (event: KeyboardEvent) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return
+      event.preventDefault()
+      callback.current()
+    },
   }
 }
