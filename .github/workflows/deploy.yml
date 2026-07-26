@@ -25,9 +25,11 @@ jobs:
           node-version: 22
           cache: npm
 
-      # sharp is optional and only needed by `npm run icons`, whose output is
-      # committed. Skipping it keeps a libvips install failure off the deploy path.
-      - run: npm ci --omit=optional
+      # Plain `npm ci`, not --omit=optional: oxlint, rolldown and lightningcss
+      # all ship their platform binaries as optional deps. sharp is declared
+      # optional so that if its libvips install ever fails, npm treats it as
+      # non-fatal — it is only needed by `npm run icons`, whose output is committed.
+      - run: npm ci
 
       - run: npm run lint
       # `npm run build` is `tsc -b && vite build`, so this also type-checks.
