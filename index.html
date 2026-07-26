@@ -2,8 +2,8 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/waffer-timer/favicon.svg" />
+    <link rel="apple-touch-icon" href="/waffer-timer/apple-touch-icon.png" />
     <!-- viewport-fit=cover so the split view reaches under tablet notches;
          user-scalable=no keeps a greasy pinch from zooming the station UI. -->
     <meta
@@ -18,18 +18,20 @@
     <title>Waffle Timer</title>
     <script>
       // Applied before first paint so a light-theme tablet never flashes dark.
-      try {
-        const saved = JSON.parse(localStorage.getItem('waffer-timer:v1') || '{}')
-        const theme =
-          saved.theme === 'light' || saved.theme === 'dark'
-            ? saved.theme
-            : window.matchMedia('(prefers-color-scheme: light)').matches
-              ? 'light'
-              : 'dark'
+      // Keep the storage key in sync with STORAGE_KEY in src/lib/storage.ts —
+      // a test asserts this file contains it.
+      ;(function () {
+        // Read the OS preference first: if localStorage itself throws (Safari
+        // private browsing) we still honour it instead of falling back to dark.
+        var theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+        try {
+          var saved = JSON.parse(localStorage.getItem('waffer-timer:v1') || '{}')
+          if (saved && (saved.theme === 'light' || saved.theme === 'dark')) theme = saved.theme
+        } catch {
+          /* missing or corrupt storage — the OS preference stands */
+        }
         document.documentElement.dataset.theme = theme
-      } catch {
-        /* corrupt storage — the dark default in the html tag stands */
-      }
+      })()
     </script>
   </head>
   <body>

@@ -5,8 +5,11 @@
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
 /* Dark is the base palette. Utilities in v4 emit var(--color-*), so the
-   light theme is expressed purely by re-pointing these same variables below. */
-@theme {
+   light theme is expressed purely by re-pointing these same variables below.
+   `static` is required: without it Tailwind only emits tokens it sees used in
+   a class, while the [data-theme='light'] block below always emits all of
+   them — so any token reached from JS would exist in light and vanish in dark. */
+@theme static {
   --color-surface: #0a0e13;
   --color-panel: #141b24;
   --color-raised: #1e2833;
@@ -34,6 +37,8 @@
   --color-machine-1: #d97706;
   --color-machine-2: #0e91b0;
   --color-overdue: #dc2626;
+
+  color-scheme: light;
 }
 
 @layer base {
@@ -41,6 +46,11 @@
   body,
   #root {
     height: 100%;
+  }
+
+  /* Keeps native form controls, carets and scrollbars in the right theme. */
+  html {
+    color-scheme: dark;
   }
 
   body {
@@ -63,13 +73,28 @@
     color: inherit;
     touch-action: manipulation;
   }
+
+  /* body's user-select: none is inherited by form fields, which would cost
+     the machine-name inputs their selection handles and copy/paste callout. */
+  input,
+  textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
 }
 
 @layer components {
-  /* Fluid so the digits fill a half-screen panel on any tablet, capped by
-     viewport height so landscape never clips them. */
+  /* Sized against the containing panel, not the viewport, so the digits fill
+     whatever split ratio the layout uses, capped by viewport height so
+     landscape never clips them. Needs an ancestor with `container-type:
+     inline-size` — `.panel` below. The binding case is the widest string,
+     the overdue '-01:23' at ~3.2em, not '00:00' at ~2.8em. */
+  .panel {
+    container-type: inline-size;
+  }
+
   .digits {
-    font-size: clamp(3rem, min(17vw, 26vh), 15rem);
+    font-size: clamp(2.5rem, min(26cqi, 20vh), 12rem);
     font-weight: 800;
     line-height: 0.95;
     font-variant-numeric: tabular-nums;

@@ -15,7 +15,6 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Waffle Timer',
         short_name: 'Waffles',
@@ -46,7 +45,9 @@ export default defineConfig({
     }),
   ],
   test: {
-    environment: 'node',
-    include: ['src/**/*.test.ts'],
+    // happy-dom, not node: the storage and theme logic under test touches
+    // localStorage and document.
+    environment: 'happy-dom',
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
   },
 })
