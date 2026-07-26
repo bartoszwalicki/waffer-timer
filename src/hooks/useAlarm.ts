@@ -29,11 +29,15 @@ export function useAlarm(timer: Timer, voice: Voice, beepDurationMs: number): vo
 
     let cancelled = false
     let timeoutId: ReturnType<typeof setTimeout> | undefined
-    const startedAt = Date.now()
+    // performance.now(), not Date.now(): monotonic, so a backwards NTP step
+    // cannot make the elapsed time negative and leave the alarm sounding until
+    // the wall clock catches up. The countdown itself needs the opposite
+    // trade-off and deliberately uses Date.now() — see useTimer.
+    const startedAt = performance.now()
 
     const cycle = () => {
       if (cancelled) return
-      if (Date.now() - startedAt >= windowMs.current) return
+      if (performance.now() - startedAt >= windowMs.current) return
 
       playAlarm(voice)
       vibrate(voice)

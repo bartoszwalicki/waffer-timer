@@ -51,6 +51,16 @@ export function normaliseName(raw: string): string {
   return Array.from(raw.trim()).slice(0, MAX_NAME_LENGTH).join('')
 }
 
+/**
+ * The name to show for a machine, falling back to the default when the
+ * operator has cleared the field or typed only spaces. Needed because the
+ * settings input is live-bound: the stored value is whatever is in the box
+ * right now, including nothing.
+ */
+export function displayName(settings: Settings, index: 0 | 1): string {
+  return settings.timers[index].name.trim() || DEFAULT_SETTINGS.timers[index].name
+}
+
 function pickTimer(raw: unknown, fallback: TimerSettings): TimerSettings {
   if (!isRecord(raw)) return fallback
   const name = typeof raw.name === 'string' ? normaliseName(raw.name) : ''

@@ -48,7 +48,9 @@
   --color-panel: #ffffff;
   --color-raised: #dde5ee;
   --color-ink: #0f172a;
-  --color-ink-dim: #5a6b80;
+  /* Darker than it looks like it needs to be: on --color-raised the lighter
+     #5a6b80 was 4.29:1, under AA for the 16px setting hints. */
+  --color-ink-dim: #556278;
   --color-line: #c3cfdd;
 
   --color-machine-1: #d97706;
@@ -117,13 +119,18 @@
      The divisor is the label's character count, because the label is not a
      fixed width: a timer left running crosses '-100:00' after 1h43m, and
      minutes are deliberately allowed past 99. Sizing on a fixed 6 characters
-     let anything longer spill across the panel border and off the screen. */
+     let anything longer spill across the panel border and off the screen.
+
+     The 18vh cap is what keeps two stacked panels inside a 768x1024 portrait
+     tablet once the top bar has taken its share; at 30vh the second machine's
+     Start button fell below the fold. In landscape the cqi term binds, so the
+     cap costs nothing there. */
   .panel {
     container-type: inline-size;
   }
 
   .digits {
-    font-size: clamp(2.5rem, min(calc(174cqi / var(--digit-chars, 6)), 30vh), 14rem);
+    font-size: clamp(2.5rem, min(calc(174cqi / var(--digit-chars, 6)), 18vh), 14rem);
     font-weight: 800;
     line-height: 0.95;
     font-variant-numeric: tabular-nums;

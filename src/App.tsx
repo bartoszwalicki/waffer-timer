@@ -8,7 +8,7 @@ import { useSettings } from './hooks/useSettings'
 import { useTimer } from './hooks/useTimer'
 import { useWakeLock } from './hooks/useWakeLock'
 import { playAlarm, unlockAudio, vibrate } from './lib/audio'
-import { DEFAULT_SETTINGS } from './lib/storage'
+import { displayName } from './lib/storage'
 
 export default function App() {
   const { settings, update, updateTimer, stepTimerDuration } = useSettings()
@@ -25,12 +25,15 @@ export default function App() {
   const fullscreen = useFullscreen()
 
   // Tablet browsers keep an AudioContext suspended until a user gesture, and a
-  // suspended context plays nothing at all — silently. Unlocking on the first
-  // touch anywhere means the alarm is armed however the operator got started.
+  // suspended context plays nothing at all — silently. Unlocking on any touch
+  // means the alarm is armed however the operator got started, and stays armed:
+  // deliberately not `once`, so a context the OS suspends later (iOS treats a
+  // resume outside a gesture as a no-op) is re-armed by the next tap instead of
+  // staying mute for the rest of the shift. unlockAudio is a no-op once running.
   useEffect(() => {
-    const onFirstGesture = () => unlockAudio()
-    document.addEventListener('pointerdown', onFirstGesture, { once: true })
-    return () => document.removeEventListener('pointerdown', onFirstGesture)
+    const onGesture = () => unlockAudio()
+    document.addEventListener('pointerdown', onGesture)
+    return () => document.removeEventListener('pointerdown', onGesture)
   }, [])
 
   if (showSettings) {
@@ -67,14 +70,14 @@ export default function App() {
       <div className="flex min-h-0 flex-1 flex-col gap-2 sm:gap-3 landscape:flex-row">
         <TimerPanel
           accent={1}
-          name={first.name.trim() || DEFAULT_SETTINGS.timers[0].name}
+          name={displayName(settings, 0)}
           timer={timerOne}
           stepSeconds={settings.stepSeconds}
           onStepDuration={(delta) => stepTimerDuration(0, delta)}
         />
         <TimerPanel
           accent={2}
-          name={second.name.trim() || DEFAULT_SETTINGS.timers[1].name}
+          name={displayName(settings, 1)}
           timer={timerTwo}
           stepSeconds={settings.stepSeconds}
           onStepDuration={(delta) => stepTimerDuration(1, delta)}

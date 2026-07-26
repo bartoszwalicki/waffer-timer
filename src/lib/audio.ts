@@ -83,8 +83,10 @@ function getContext(): AudioContext | null {
  * Unlocks audio from within a user gesture.
  *
  * A context created before any gesture starts life `suspended`, and a suspended
- * context plays nothing — silently. Calling this from every Start/Reset tap
- * means the context is always running by the time an alarm is due.
+ * context plays nothing — silently. App binds this to `pointerdown` on the
+ * document, so the first touch anywhere arms audio; the binding is not `once`,
+ * so a context the OS later suspends (an iOS call interruption, say) is
+ * re-armed by the next tap rather than staying mute for the shift.
  */
 export function unlockAudio(): void {
   const ctx = getContext()

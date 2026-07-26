@@ -3,6 +3,7 @@ import type { WakeLockStatus } from '../hooks/useWakeLock'
 import {
   BEEP_DURATION_CHOICES_MS,
   DEFAULT_SETTINGS,
+  displayName,
   MAX_NAME_LENGTH,
   STEP_SECONDS_CHOICES,
   type Settings,
@@ -120,7 +121,7 @@ export function SettingsPage({
                     voice === 1 ? 'bg-machine-1' : 'bg-machine-2'
                   }`}
                 >
-                  Test {settings.timers[voice - 1].name}
+                  Test {displayName(settings, (voice - 1) as 0 | 1)}
                 </button>
               ))}
             </div>
@@ -129,10 +130,17 @@ export function SettingsPage({
           <Section title="Display">
             <Switch
               label="Keep screen awake"
+              // Reports whether the lock is actually held, not merely asked
+              // for: a battery-saver policy can deny it, and a switch that
+              // still reads ON while the screen sleeps means a missed alarm.
               hint={
-                wakeLock.supported
-                  ? 'Stops the tablet sleeping during service'
-                  : 'Not supported by this browser'
+                !wakeLock.supported
+                  ? 'Not supported by this browser'
+                  : !settings.wakeLock
+                    ? 'Stops the tablet sleeping during service'
+                    : wakeLock.active
+                      ? 'Active — the screen will stay on'
+                      : 'Requested, but the system has not granted it'
               }
               disabled={!wakeLock.supported}
               checked={settings.wakeLock}

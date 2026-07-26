@@ -26,32 +26,44 @@ export function useWakeLock(enabled: boolean): WakeLockStatus {
 
     let sentinel: WakeLockSentinel | null = null
     let cancelled = false
+    let detachRelease: (() => void) | null = null
+
+    const forget = () => {
+      detachRelease?.()
+      detachRelease = null
+      sentinel = null
+    }
 
     const release = () => {
       if (sentinel) {
         void sentinel.release().catch(() => {
           // Already released by the browser; nothing to do.
         })
-        sentinel = null
       }
+      forget()
       setActive(false)
     }
 
     const acquire = async () => {
       if (cancelled || document.visibilityState !== 'visible' || sentinel) return
       try {
-        sentinel = await navigator.wakeLock.request('screen')
+        const granted = await navigator.wakeLock.request('screen')
         if (cancelled) {
-          void sentinel.release().catch(() => {})
-          sentinel = null
+          void granted.release().catch(() => {})
           return
         }
+        sentinel = granted
         setActive(true)
-        // Fires when the browser drops the lock on its own.
-        sentinel.addEventListener('release', () => {
-          sentinel = null
+
+        // Fires when the browser drops the lock on its own. Detached again on
+        // release so a superseded sentinel cannot report inactive over a newer
+        // lock that is actually held.
+        const onRelease = () => {
+          forget()
           setActive(false)
-        })
+        }
+        granted.addEventListener('release', onRelease)
+        detachRelease = () => granted.removeEventListener('release', onRelease)
       } catch {
         // Denied — typically a hidden document or a battery-saver policy.
         setActive(false)
