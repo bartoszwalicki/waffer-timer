@@ -1,0 +1,78 @@
+@import 'tailwindcss';
+
+/* Dark mode is driven by the persisted data-theme attribute rather than
+   prefers-color-scheme, so the in-app toggle is always authoritative. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* Dark is the base palette. Utilities in v4 emit var(--color-*), so the
+   light theme is expressed purely by re-pointing these same variables below. */
+@theme {
+  --color-surface: #0a0e13;
+  --color-panel: #141b24;
+  --color-raised: #1e2833;
+  --color-ink: #eef4fb;
+  --color-ink-dim: #93a4b8;
+  --color-line: #2a3745;
+
+  --color-machine-1: #fbbf24;
+  --color-machine-2: #22d3ee;
+  --color-overdue: #ef4444;
+
+  /* Filled accents are always saturated mid-tones, so near-black label text
+     beats white on contrast in both themes. */
+  --color-on-accent: #0a0e13;
+}
+
+[data-theme='light'] {
+  --color-surface: #e8edf3;
+  --color-panel: #ffffff;
+  --color-raised: #dde5ee;
+  --color-ink: #0f172a;
+  --color-ink-dim: #5a6b80;
+  --color-line: #c3cfdd;
+
+  --color-machine-1: #d97706;
+  --color-machine-2: #0e91b0;
+  --color-overdue: #dc2626;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+    /* Wall-mounted tablet in a kitchen: no pull-to-refresh, no double-tap
+       zoom, no text selection from a stray greasy swipe. */
+    overscroll-behavior: none;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    touch-action: manipulation;
+  }
+}
+
+@layer components {
+  /* Fluid so the digits fill a half-screen panel on any tablet, capped by
+     viewport height so landscape never clips them. */
+  .digits {
+    font-size: clamp(3rem, min(17vw, 26vh), 15rem);
+    font-weight: 800;
+    line-height: 0.95;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+}

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#0a0e13"/>
+  <!-- Waffle grid, split in the app's two machine colours -->
+  <g transform="translate(96 96)">
+    <rect x="0" y="0" width="320" height="320" rx="40" fill="#fbbf24"/>
+    <path d="M0 160 H320 V280 A40 40 0 0 1 280 320 H40 A40 40 0 0 1 0 280 Z" fill="#22d3ee"/>
+    <g stroke="#0a0e13" stroke-width="18" stroke-linecap="round" opacity="0.92">
+      <path d="M80 24 V296 M160 24 V296 M240 24 V296"/>
+      <path d="M24 80 H296 M24 160 H296 M24 240 H296"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <!-- viewport-fit=cover so the split view reaches under tablet notches;
+         user-scalable=no keeps a greasy pinch from zooming the station UI. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="theme-color" content="#0a0e13" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Waffles" />
+    <title>Waffle Timer</title>
+    <script>
+      // Applied before first paint so a light-theme tablet never flashes dark.
+      try {
+        const saved = JSON.parse(localStorage.getItem('waffer-timer:v1') || '{}')
+        const theme =
+          saved.theme === 'light' || saved.theme === 'dark'
+            ? saved.theme
+            : window.matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light'
+              : 'dark'
+        document.documentElement.dataset.theme = theme
+      } catch {
+        /* corrupt storage — the dark default in the html tag stands */
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
