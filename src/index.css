@@ -24,6 +24,23 @@
   /* Filled accents are always saturated mid-tones, so near-black label text
      beats white on contrast in both themes. */
   --color-on-accent: #0a0e13;
+
+  --animate-overdue: overdue-pulse 1.1s ease-in-out infinite;
+}
+
+/* Colour and border only, no transform: an overdue panel must grab attention
+   from across the room without becoming motion a reduced-motion user has to
+   endure, and without shifting the buttons under someone's finger. */
+@keyframes overdue-pulse {
+  0%,
+  100% {
+    background-color: color-mix(in srgb, var(--color-overdue) 14%, transparent);
+    border-color: var(--color-overdue);
+  }
+  50% {
+    background-color: color-mix(in srgb, var(--color-overdue) 42%, transparent);
+    border-color: color-mix(in srgb, var(--color-overdue) 60%, white);
+  }
 }
 
 [data-theme='light'] {
@@ -51,6 +68,14 @@
   /* Keeps native form controls, carets and scrollbars in the right theme. */
   html {
     color-scheme: dark;
+  }
+
+  /* viewport-fit=cover lets the layout reach the panel edges, so the insets
+     have to be paid back here or the buttons land under a notch or the iPad
+     home indicator. */
+  #root {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
   }
 
   body {
@@ -94,7 +119,7 @@
   }
 
   .digits {
-    font-size: clamp(2.5rem, min(26cqi, 20vh), 12rem);
+    font-size: clamp(2.5rem, min(30cqi, 30vh), 14rem);
     font-weight: 800;
     line-height: 0.95;
     font-variant-numeric: tabular-nums;

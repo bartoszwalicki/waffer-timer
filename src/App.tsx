@@ -1,9 +1,38 @@
+import { TimerPanel } from './components/TimerPanel'
+import { useSettings } from './hooks/useSettings'
+import { useTimer } from './hooks/useTimer'
+import { stepDuration } from './lib/time'
+
 export default function App() {
+  const { settings, updateTimer } = useSettings()
+  const [first, second] = settings.timers
+
+  const timerOne = useTimer(first.durationMs)
+  const timerTwo = useTimer(second.durationMs)
+
   return (
-    <main className="panel flex h-full flex-col items-center justify-center gap-4 bg-surface p-6 text-center">
-      <h1 className="digits text-machine-1">00:00</h1>
-      <p className="text-2xl font-semibold tracking-wide text-ink">Waffle Timer</p>
-      <p className="text-lg text-ink-dim">Scaffold deployed — timers land in the next phase.</p>
-    </main>
+    // Side by side in landscape, stacked in portrait — a wall-mounted tablet
+    // could be either way up, and two half-width panels in portrait would
+    // squeeze the digits down to nothing.
+    <div className="flex h-full w-full flex-col gap-3 p-3 landscape:flex-row">
+      <TimerPanel
+        accent={1}
+        name={first.name}
+        timer={timerOne}
+        stepSeconds={settings.stepSeconds}
+        onStepDuration={(delta) =>
+          updateTimer(0, { durationMs: stepDuration(first.durationMs, delta) })
+        }
+      />
+      <TimerPanel
+        accent={2}
+        name={second.name}
+        timer={timerTwo}
+        stepSeconds={settings.stepSeconds}
+        onStepDuration={(delta) =>
+          updateTimer(1, { durationMs: stepDuration(second.durationMs, delta) })
+        }
+      />
+    </div>
   )
 }
