@@ -9,6 +9,7 @@ import { useTimer } from './hooks/useTimer'
 import { useWakeLock } from './hooks/useWakeLock'
 import { playAlarm, unlockAudio, vibrate } from './lib/audio'
 import { displayName } from './lib/storage'
+import { setReloadAllowed } from './lib/updates'
 
 export default function App() {
   const { settings, update, updateTimer, stepTimerDuration } = useSettings()
@@ -23,6 +24,13 @@ export default function App() {
 
   const wakeLock = useWakeLock(settings.wakeLock)
   const fullscreen = useFullscreen()
+
+  // A new deploy must not reload the page mid-bake: countdowns live only in
+  // memory, so both machines would silently reset with nobody watching.
+  const bothIdle = !timerOne.running && !timerTwo.running
+  useEffect(() => {
+    setReloadAllowed(bothIdle)
+  }, [bothIdle])
 
   // Tablet browsers keep an AudioContext suspended until a user gesture, and a
   // suspended context plays nothing at all — silently. Unlocking on any touch

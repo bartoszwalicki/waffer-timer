@@ -18,6 +18,29 @@ with its own programmed time, colour and alarm sound. Runs entirely in the brows
 - Light and dark themes for different ambient light.
 - Installable and fully offline-capable.
 
+## Notes for whoever maintains this
+
+A few decisions are load-bearing and easy to undo by accident:
+
+- **`vite.config.ts` sets `base: '/waffer-timer/'`** to match the repository name. Every asset
+  URL, the manifest scope and the service worker scope depend on it.
+- **`@theme static` in `src/index.css`.** Without `static`, Tailwind only emits theme variables
+  it can see used in a class, while the unlayered `[data-theme='light']` block always emits all
+  of them — so any colour reached from JS would work in light and silently vanish in dark.
+- **Never build a class name by interpolation** (`` `text-machine-${n}` ``). Tailwind resolves
+  classes by scanning source text; an interpolated name compiles in dev and is missing from the
+  production CSS. `TimerPanel` uses a static lookup for exactly this reason.
+- **The countdown derives from a wall-clock deadline**, it never accumulates per tick. Tablets
+  throttle timers hard in background tabs, so an accumulating counter would drift or stall.
+  `useTimer` uses `Date.now()` deliberately (it survives device sleep); `useAlarm` uses
+  `performance.now()` deliberately (monotonic, so a clock step can't wedge the alarm on).
+- **Running countdowns are in memory only.** A service-worker update therefore waits for both
+  timers to be idle before reloading — see `src/lib/reload-gate.ts`. If you make the app reload
+  for any other reason, gate it the same way or you will reset both machines mid-service.
+- **The digit font size divides by the label's character count.** A timer left running reaches
+  `-100:00`, and the label is not a fixed width; sizing on a fixed six characters overflowed the
+  panel. The `18vh` cap is what keeps two stacked panels inside a 768×1024 portrait tablet.
+
 ## Development
 
 ```bash
@@ -38,8 +61,12 @@ synthesised with the Web Audio API, so there are no audio assets to load.
 
 ## Deployment
 
-Pushing to `main` triggers `.github/workflows/deploy.yml`, which type-checks, tests, builds and
-publishes `dist/` to GitHub Pages.
+Pushing to `main` triggers `.github/workflows/deploy.yml`, which lints, tests, builds
+(`tsc -b && vite build`) and publishes `dist/` to GitHub Pages.
 
-`vite.config.ts` sets `base: '/waffer-timer/'` to match the repository name — asset URLs break
-if that ever diverges.
+A tablet left on the page picks up new deploys on its own: the app checks hourly and reloads —
+but only once both timers are idle.
+
+The remote must be **SSH** (`git@github.com:bartoszwalicki/waffer-timer.git`). Pushing
+`.github/workflows/*` over HTTPS needs the `workflow` OAuth scope, which the local `gh` token
+does not have.
