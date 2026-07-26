@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { loadSettings, saveSettings, type Settings } from '../lib/storage'
-import { clampDuration } from '../lib/time'
+import { clampDuration, stepDuration } from '../lib/time'
+
+/** Must match --color-surface for each theme in index.css. */
+const THEME_COLORS: Record<Settings['theme'], string> = {
+  dark: '#0a0e13',
+  light: '#e8edf3',
+}
 
 export type UseSettings = {
   settings: Settings
   update: (patch: Partial<Settings>) => void
   /** Patches one machine's settings by index without disturbing the other. */
   updateTimer: (index: 0 | 1, patch: Partial<Settings['timers'][number]>) => void
+  /** Steps one machine's duration by `deltaMs`, snapping onto the step grid. */
+  stepTimerDuration: (index: 0 | 1, deltaMs: number) => void
 }
 
 /**
@@ -49,6 +57,22 @@ export function useSettings(): UseSettings {
     [],
   )
 
+  // The arithmetic happens inside the updater, reading `current` rather than a
+  // value captured at render time. Steps that arrive faster than React can
+  // re-render therefore accumulate instead of all computing the same result
+  // from the same stale duration and collapsing into one.
+  const stepTimerDuration = useCallback((index: 0 | 1, deltaMs: number) => {
+    touched.current = true
+    setSettings((current) => {
+      const timers: Settings['timers'] = [...current.timers]
+      timers[index] = {
+        ...timers[index],
+        durationMs: stepDuration(timers[index].durationMs, deltaMs),
+      }
+      return { ...current, timers }
+    })
+  }, [])
+
   useEffect(() => {
     if (!touched.current) return
     saveSettings(settings)
@@ -56,7 +80,12 @@ export function useSettings(): UseSettings {
 
   useEffect(() => {
     document.documentElement.dataset.theme = settings.theme
+    // Keep the browser chrome, Android task switcher and splash screen in step
+    // with the theme rather than stuck on the dark value from index.html.
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', THEME_COLORS[settings.theme])
   }, [settings.theme])
 
-  return { settings, update, updateTimer }
+  return { settings, update, updateTimer, stepTimerDuration }
 }
