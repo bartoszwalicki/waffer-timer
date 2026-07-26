@@ -1,18 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
+import { deriveTimerState, type TimerState } from '../lib/time'
 
 /** How often the display refreshes. Fast enough that no second is ever skipped. */
 const TICK_MS = 200
 
-export type Timer = {
+export type Timer = TimerState & {
   /** Programmed target, in ms. */
   durationMs: number
-  /** Negative once overdue. */
-  remainingMs: number
-  running: boolean
-  /** True from the moment remainingMs goes non-positive until reset. */
-  overdue: boolean
-  /** ms since the timer hit zero, or 0 while it has not. */
-  elapsedPastZeroMs: number
   /** Resets to the programmed value and runs. Valid from any state. */
   start: () => void
   /** Returns to the programmed value and stops. Silences the alarm. */
@@ -26,6 +20,12 @@ export type Timer = {
  * accumulated per tick. Tablet browsers throttle timers hard in background
  * tabs, so an accumulating counter would drift or stall; a derived one cannot.
  * The interval exists only to trigger re-renders.
+ *
+ * Because the derivation reads the live `durationMs`, a stepper tap adjusts the
+ * run in progress, not just the next one: "this batch needs another 10 seconds"
+ * is a normal call to make mid-bake, and the panel keeps showing the programmed
+ * value alongside so the two are never confused. Trimming below the time
+ * already elapsed drops straight into overdue, which is the honest answer.
  */
 export function useTimer(durationMs: number): Timer {
   const [startedAt, setStartedAt] = useState<number | null>(null)
@@ -59,20 +59,9 @@ export function useTimer(durationMs: number): Timer {
     return () => document.removeEventListener('visibilitychange', onVisibilityChange)
   }, [])
 
-  // Deriving from the live durationMs means a stepper tap adjusts the run in
-  // progress, not just the next one: "this batch needs another 10 seconds" is
-  // a normal call to make mid-bake, and the panel keeps showing the programmed
-  // value alongside so the two are never confused. Trimming below the time
-  // already elapsed drops straight into overdue, which is the honest answer.
-  const running = startedAt !== null
-  const remainingMs = running ? durationMs - (now - startedAt) : durationMs
-
   return {
+    ...deriveTimerState(durationMs, startedAt, now),
     durationMs,
-    remainingMs,
-    running,
-    overdue: running && remainingMs <= 0,
-    elapsedPastZeroMs: running && remainingMs < 0 ? -remainingMs : 0,
     start,
     reset,
   }

@@ -11,9 +11,9 @@ const ACCELERATION = 0.82
  * Fires `action` on press, then repeatedly (and ever faster) while held.
  *
  * Without this, programming 00:30 up to 04:00 in 10-second steps is 21 taps.
- * Uses pointer events so it behaves identically for touch and mouse, and
- * cancels on pointerup/pointercancel/pointerleave so a finger dragged off the
- * button stops the repeat instead of running away.
+ * Uses pointer events so it behaves identically for touch and mouse. A finger
+ * dragged off the button stops the repeat via pointercancel — implicit pointer
+ * capture means pointerleave does not fire for touch, so both are handled.
  */
 export function useHoldRepeat(action: () => void) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -31,6 +31,16 @@ export function useHoldRepeat(action: () => void) {
 
   // A component unmounting mid-hold (e.g. opening settings) must not keep firing.
   useEffect(() => stop, [stop])
+
+  // Belt and braces for the one case where no pointer event arrives to end the
+  // hold: the tablet locking or the app being backgrounded with a finger down.
+  useEffect(() => {
+    const onHidden = () => {
+      if (document.visibilityState === 'hidden') stop()
+    }
+    document.addEventListener('visibilitychange', onHidden)
+    return () => document.removeEventListener('visibilitychange', onHidden)
+  }, [stop])
 
   const start = useCallback(() => {
     stop()

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { useHoldRepeat } from '../hooks/useHoldRepeat'
 import type { Timer } from '../hooks/useTimer'
 import { displaySeconds, formatMMSS } from '../lib/time'
@@ -31,18 +32,18 @@ export type TimerPanelProps = {
 }
 
 export function TimerPanel({ accent, name, timer, stepSeconds, onStepDuration }: TimerPanelProps) {
-  const { remainingMs, running, overdue, durationMs, start, reset } = timer
+  const { remainingMs, running, overdue, durationMs, fractionRemaining, start, reset } = timer
   const colors = ACCENTS[accent]
 
   const stepDown = useHoldRepeat(() => onStepDuration(-stepSeconds * 1000))
   const stepUp = useHoldRepeat(() => onStepDuration(stepSeconds * 1000))
 
-  const label = formatMMSS(displaySeconds(remainingMs))
-  // durationMs is clamped above zero on the way in, so this cannot divide by 0.
-  const fractionRemaining = Math.min(1, Math.max(0, remainingMs / durationMs))
+  const seconds = displaySeconds(remainingMs)
+  const label = formatMMSS(seconds)
 
   return (
     <section
+      aria-label={name}
       className={`panel flex min-w-0 flex-1 flex-col gap-3 rounded-3xl border-4 p-3 transition-colors duration-300 sm:gap-4 sm:p-4 ${
         overdue
           ? 'animate-overdue border-overdue bg-overdue/15'
@@ -61,10 +62,20 @@ export function TimerPanel({ accent, name, timer, stepSeconds, onStepDuration }:
       <button
         type="button"
         onClick={start}
-        aria-label={`${name}: ${overdue ? 'overdue by' : 'remaining'} ${label}. Tap to restart.`}
+        aria-label={`${name}: ${
+          overdue ? `overdue by ${formatMMSS(Math.abs(seconds))}` : `${label} remaining`
+        }. Tap to restart.`}
         className="flex min-h-0 flex-3 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-0 bg-transparent p-0 active:scale-[0.98] motion-safe:transition-transform"
       >
-        <span className={`digits block ${overdue ? 'text-overdue' : colors.text}`}>{label}</span>
+        {/* The label is not a fixed width — a timer left running reaches
+            '-100:00' — so the font size has to know how many characters it is
+            sizing. See the .digits rule. */}
+        <span
+          className={`digits block ${overdue ? 'text-overdue' : colors.text}`}
+          style={{ '--digit-chars': Math.max(6, label.length) } as CSSProperties}
+        >
+          {label}
+        </span>
         <span className="text-base font-semibold tracking-widest text-ink-dim uppercase sm:text-lg">
           {overdue ? 'overdue' : running ? 'baking' : 'ready'}
           {/* While running the digits show the countdown, so the programmed
@@ -114,9 +125,12 @@ export function TimerPanel({ accent, name, timer, stepSeconds, onStepDuration }:
           +{stepSeconds}s
         </button>
 
+        {/* Named per machine: without this the page exposes two identical
+            "Reset" and "Start" buttons. */}
         <button
           type="button"
           onClick={reset}
+          aria-label={`Reset ${name}`}
           className="min-h-[3.25rem] rounded-2xl border-2 border-line bg-raised text-2xl font-extrabold tracking-widest text-ink uppercase active:bg-line sm:text-4xl"
         >
           Reset
@@ -124,6 +138,7 @@ export function TimerPanel({ accent, name, timer, stepSeconds, onStepDuration }:
         <button
           type="button"
           onClick={start}
+          aria-label={`Start ${name}`}
           className={`min-h-[3.25rem] rounded-2xl text-2xl font-extrabold tracking-widest text-on-accent uppercase active:brightness-90 sm:text-4xl ${colors.fill}`}
         >
           Start

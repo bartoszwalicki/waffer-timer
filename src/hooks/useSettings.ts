@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { loadSettings, saveSettings, type Settings } from '../lib/storage'
+import { clampDuration } from '../lib/time'
 
 export type UseSettings = {
   settings: Settings
@@ -18,15 +19,30 @@ export type UseSettings = {
 export function useSettings(): UseSettings {
   const [settings, setSettings] = useState<Settings>(loadSettings)
 
+  // Nothing is persisted until the operator actually changes something, so an
+  // untouched install keeps following the OS colour preference instead of
+  // freezing whatever theme it happened to boot with.
+  const touched = useRef(false)
+
   const update = useCallback((patch: Partial<Settings>) => {
+    touched.current = true
     setSettings((current) => ({ ...current, ...patch }))
   }, [])
 
   const updateTimer = useCallback(
     (index: 0 | 1, patch: Partial<Settings['timers'][number]>) => {
+      touched.current = true
       setSettings((current) => {
         const timers: Settings['timers'] = [...current.timers]
-        timers[index] = { ...timers[index], ...patch }
+        timers[index] = {
+          ...timers[index],
+          ...patch,
+          // Clamped here rather than trusting callers: an out-of-range duration
+          // reaches the panel as a divide-by-zero in the progress bar.
+          ...(patch.durationMs === undefined
+            ? {}
+            : { durationMs: clampDuration(patch.durationMs) }),
+        }
         return { ...current, timers }
       })
     },
@@ -34,6 +50,7 @@ export function useSettings(): UseSettings {
   )
 
   useEffect(() => {
+    if (!touched.current) return
     saveSettings(settings)
   }, [settings])
 

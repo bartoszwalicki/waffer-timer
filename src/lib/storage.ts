@@ -42,15 +42,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+/**
+ * Trims, then truncates by code point rather than code unit — a plain
+ * `slice` would cut an emoji in half and leave a lone surrogate rendering
+ * as a replacement character.
+ */
+export function normaliseName(raw: string): string {
+  return Array.from(raw.trim()).slice(0, MAX_NAME_LENGTH).join('')
+}
+
 function pickTimer(raw: unknown, fallback: TimerSettings): TimerSettings {
   if (!isRecord(raw)) return fallback
-  const name =
-    typeof raw.name === 'string' && raw.name.trim() !== ''
-      ? raw.name.slice(0, MAX_NAME_LENGTH)
-      : fallback.name
+  const name = typeof raw.name === 'string' ? normaliseName(raw.name) : ''
   const durationMs =
     typeof raw.durationMs === 'number' ? clampDuration(raw.durationMs) : fallback.durationMs
-  return { name, durationMs }
+  return { name: name === '' ? fallback.name : name, durationMs }
 }
 
 function pickFromChoices(raw: unknown, choices: number[], fallback: number): number {
@@ -87,14 +93,36 @@ export function parseSettings(raw: unknown): Settings {
   }
 }
 
+/** The theme to use before the operator has ever picked one. */
+export function osTheme(): Theme {
+  return typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-color-scheme: light)').matches
+    ? 'light'
+    : 'dark'
+}
+
+/**
+ * Loads settings, falling back to the OS colour preference until the operator
+ * chooses a theme.
+ *
+ * This has to agree with the pre-paint script in index.html, which applies the
+ * same rule before React boots. If this returned a hardcoded dark default
+ * instead, a light-preference tablet would paint light and then snap to dark.
+ */
 export function loadSettings(): Settings {
+  const withOsTheme = (settings: Settings): Settings => ({ ...settings, theme: osTheme() })
+
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored === null) return DEFAULT_SETTINGS
-    return parseSettings(JSON.parse(stored))
+    if (stored === null) return withOsTheme(DEFAULT_SETTINGS)
+
+    const raw: unknown = JSON.parse(stored)
+    const parsed = parseSettings(raw)
+    const themeWasChosen = isRecord(raw) && (raw.theme === 'light' || raw.theme === 'dark')
+    return themeWasChosen ? parsed : withOsTheme(parsed)
   } catch {
     // Corrupt JSON, or storage blocked entirely (private browsing).
-    return DEFAULT_SETTINGS
+    return withOsTheme(DEFAULT_SETTINGS)
   }
 }
 

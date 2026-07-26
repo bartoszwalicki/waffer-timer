@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   DEFAULT_SETTINGS,
   loadSettings,
@@ -56,6 +56,18 @@ describe('parseSettings', () => {
     expect(result.timers[1].name).toBe(DEFAULT_SETTINGS.timers[1].name)
   })
 
+  it('stores names trimmed, so a padded name cannot render as blank', () => {
+    const result = parseSettings({ timers: [{ name: '   Deep   ' }] })
+    expect(result.timers[0].name).toBe('Deep')
+  })
+
+  it('truncates by code point, never splitting an emoji into a lone surrogate', () => {
+    const result = parseSettings({ timers: [{ name: '👩‍🍳'.repeat(10) }] })
+    // A code-unit slice would leave a trailing '\uD83C' rendering as U+FFFD.
+    expect(result.timers[0].name).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/)
+    expect(Array.from(result.timers[0].name)).toHaveLength(MAX_NAME_LENGTH)
+  })
+
   it('accepts both themes', () => {
     expect(parseSettings({ theme: 'light' }).theme).toBe('light')
     expect(parseSettings({ theme: 'dark' }).theme).toBe('dark')
@@ -63,17 +75,58 @@ describe('parseSettings', () => {
 })
 
 describe('loadSettings', () => {
+  const realMatchMedia = window.matchMedia
+
+  /** Pins the OS colour preference so the theme fallback is deterministic. */
+  const setOsPreference = (prefersLight: boolean) => {
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes('light') ? prefersLight : !prefersLight,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia
+  }
+
   beforeEach(() => {
     localStorage.clear()
+    setOsPreference(false)
+  })
+
+  afterEach(() => {
+    window.matchMedia = realMatchMedia
   })
 
   it('returns defaults when nothing is stored', () => {
-    expect(loadSettings()).toEqual(DEFAULT_SETTINGS)
+    expect(loadSettings()).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark' })
   })
 
   it('returns defaults for corrupt JSON rather than throwing', () => {
     localStorage.setItem(STORAGE_KEY, '{not json')
-    expect(loadSettings()).toEqual(DEFAULT_SETTINGS)
+    expect(loadSettings()).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark' })
+  })
+
+  it('follows the OS colour preference until a theme is chosen', () => {
+    // Otherwise a light-preference tablet paints light from index.html's
+    // pre-paint script and then snaps to dark once React mounts.
+    setOsPreference(true)
+    expect(loadSettings().theme).toBe('light')
+
+    setOsPreference(false)
+    expect(loadSettings().theme).toBe('dark')
+  })
+
+  it('ignores the OS preference once a theme has been stored', () => {
+    setOsPreference(true)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ theme: 'dark' }))
+    expect(loadSettings().theme).toBe('dark')
+  })
+
+  it('falls back to the OS preference when stored data omits the theme', () => {
+    setOsPreference(true)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ stepSeconds: 30 }))
+    const loaded = loadSettings()
+    expect(loaded.theme).toBe('light')
+    expect(loaded.stepSeconds).toBe(30)
   })
 
   it('round-trips a saved value', () => {
